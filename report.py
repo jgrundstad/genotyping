@@ -12,11 +12,10 @@ class Reporter:
     self.__build_regex()
     self.__identify_columns()
     self.parse_infile()
-    self.print_output()
 
 
   def __build_regex(self):
-    self.REGEX = re.compile(r'(?P<eff>[\w\_]+)\(%s\)' % '\|'.join([
+    self.regex = re.compile(r'(?P<eff>[\w\_]+)\(%s\)' % '\|'.join([
       '(?P<effect_impact>[^\|]*)',
       '(?P<functional_class>[^\|]*)',
       '(?P<codon_change>[^\|]*)',
@@ -33,26 +32,10 @@ class Reporter:
 
 
   def __identify_columns(self):
-    self.columns =[
-      'chr',
-      'pos',
-      'context',
-      'ref',
-      'alt',
-      'normal_ref_count',
-      'normal_alt_count',
-      'tumor_ref_count',
-      'tumor_alt_count',
-      'gene',
-#  'transcript',
-      'effect',
-#  'biotype',
-      'coding',
-      'codon_change',
-      'amino_acid_change',
-      'amino_acid_length',
-      'mutect_call',
-    ] 
+    self.columns = ['chr', 'pos', 'context', 'ref', 'alt', 'normal_ref_count',
+                    'normal_alt_count', 'tumor_ref_count', 'tumor_alt_count',
+                    'gene', 'effect', 'coding', 'codon_change',
+                    'amino_acid_change', 'amino_acid_length', 'mutect_call']
 
 
   def parse_infile(self):
@@ -63,9 +46,10 @@ class Reporter:
     try:
       for line in open(self.infile):
         # Skip headers.
-        if line[0] == '#': continue
+        if line[0] == '#': 
+          continue
         line = line.strip().split('\t')
-        if line[0] == 'contig': 
+        if line[0] == 'contig':
           column_refs = line
           continue
 
@@ -81,10 +65,11 @@ class Reporter:
         report.append(line[column_refs.index('t_alt_count')]) # tumor alternative count
 
         # Interpret the effects of the variant.
-        for match in self.REGEX.finditer(line[7]):
+        for match in self.regex.finditer(line[7]):
           # NOTE this is a hack for Kevin's request
-          if self.filter_missense_nonsense_only: 
-            if match.group('functional_class') not in ['MISSENSE','NONSENSE']: continue
+          if self.filter_missense_nonsense_only:
+            if match.group('functional_class') not in ['MISSENSE', 'NONSENSE']:
+              continue
 
           self.outstring += '\t'.join(report)
           self.outstring += '\t%s' % match.group('gene_name')
@@ -108,21 +93,21 @@ class Reporter:
 
 
 def main():
-  parser = argparse.ArgumentParser(description='parse snpEff annotated ' + \
-      'output into a digestable report.')
+  parser = argparse.ArgumentParser(
+    description='parse snpEff annotated output into a digestable report.')
   parser.add_argument('-i', '--infile', action='store', dest='infile',
-      help='snpEff annotated variant file')
-  parser.add_argument('-f', '--filter_missense_nonsense_only', 
-      action='store_true', dest='f', default=False,
-      help='Apply a filter that only reports NONSENSE and MISSENSE vars'
-      )
+                      help='snpEff annotated variant file')
+  parser.add_argument('-f', '--filter_missense_nonsense_only',
+                      action='store_true', dest='f', default=False,
+                      help='Apply a filter that only reports NONSENSE and ' \
+                          + 'MISSENSE vars')
   if len(sys.argv) == 1:
     parser.print_help()
     sys.exit(1)
   args = parser.parse_args()
 
-  r = Reporter(args.infile, False)
-
+  r = Reporter(args.infile, args.f)
+  r.print_output()
 
 if __name__ == '__main__':
   main()
